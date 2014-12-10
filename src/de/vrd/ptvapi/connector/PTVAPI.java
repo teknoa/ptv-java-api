@@ -11,10 +11,9 @@ import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.commons.codec.net.URLCodec;
 
@@ -29,6 +28,7 @@ import de.vrd.ptvapi.model.Line;
 import de.vrd.ptvapi.model.Mode;
 import de.vrd.ptvapi.model.Result;
 import de.vrd.ptvapi.model.Stop;
+import de.vrd.ptvapi.model.StoppingPattern;
 
 public class PTVAPI {
 
@@ -271,5 +271,26 @@ public class PTVAPI {
 		
 	}
 	
-	
+	public StoppingPattern getStoppingPattern(String transport_type, Integer runId, Integer stopId, Date time) {
+		return getStoppingPattern(transport_type, runId, stopId, Helper.getCurrentTimeAsUTC(time));
+	}
+
+
+	private StoppingPattern getStoppingPattern(String transport_type, Integer runId, Integer stopId,
+			String currentTimeAsUTC) {
+
+		List<KeyVal> params = new ArrayList<>();
+		params.add(new KeyVal("mode", Mode.getMode(transport_type).toString()));
+		params.add(new KeyVal("run", runId.toString()));
+		params.add(new KeyVal("stop", stopId.toString()));
+
+		List<KeyVal> params2 = new ArrayList<>();
+		params2.add(new KeyVal("for_utc", currentTimeAsUTC));
+
+		
+		String queryURLREST = getQueryURL("stopping-pattern", params, params2);
+		String queryresult = getQueryResult(queryURLREST);
+		JsonStreamParser parser = new JsonStreamParser(queryresult);
+		return null;
+	}
 }
