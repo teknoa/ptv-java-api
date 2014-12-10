@@ -1,4 +1,4 @@
-package de.vrd.ptvapi.model;
+package de.vrd.ptvapi.connector;
 
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;

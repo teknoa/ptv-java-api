@@ -1,4 +1,4 @@
-package de.vrd.ptvapi.model;
+package de.vrd.ptvapi.connector;
 
 public class KeyVal {
 	public String key;
