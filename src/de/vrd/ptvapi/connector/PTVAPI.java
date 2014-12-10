@@ -24,8 +24,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonStreamParser;
 
+import de.vrd.ptvapi.deserialiser.DepartureDeserializer;
+import de.vrd.ptvapi.deserialiser.DirectionDeserializer;
+import de.vrd.ptvapi.deserialiser.PlatformDeserializer;
+import de.vrd.ptvapi.model.Departure;
+import de.vrd.ptvapi.model.Direction;
 import de.vrd.ptvapi.model.Line;
-import de.vrd.ptvapi.model.Mode;
+import de.vrd.ptvapi.model.Platform;
 import de.vrd.ptvapi.model.Result;
 import de.vrd.ptvapi.model.Stop;
 import de.vrd.ptvapi.model.StoppingPattern;
@@ -61,58 +66,13 @@ public class PTVAPI {
 	void init() {
 		crypto = new Crypto(key);
 		codec = new URLCodec();
-		gson = new GsonBuilder().create();
+		GsonBuilder builder = new GsonBuilder();
+		builder.registerTypeAdapter(Platform.class, new PlatformDeserializer());
+		builder.registerTypeAdapter(Direction.class, new DirectionDeserializer());		
+		builder.registerTypeAdapter(Departure.class, new DepartureDeserializer());
+		gson = builder.create();
 	}
 
-	private String getQueryURLParams(String apicall, List<KeyVal> params) {
-		StringBuffer paramstring = new StringBuffer();
-		paramstring.append("?devid="+devId);
-		if(params != null)
-			for(KeyVal keyval: params){
-				paramstring.append("&");
-				paramstring.append(keyval.key);
-				paramstring.append("=");
-				String val;
-				try {
-					val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					val = "";
-				}
-				paramstring.append(val);
-			}
-
-		String queryurl = VERSION + apicall + paramstring.toString();
-		String signature = crypto.hmacSha1(queryurl, null);
-		String ret = BASEURL + queryurl + "&signature=" + signature;
-		return ret;
-	}
-	private String getQueryURLREST(String apicall, List<KeyVal> params) {
-		StringBuffer paramstring = new StringBuffer();
-		if(params != null)
-			for(KeyVal keyval: params){
-				paramstring.append(keyval.key);
-				paramstring.append("/");
-				String val;
-				try {
-					val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					val = "";
-				}
-				paramstring.append(val);
-			}
-		paramstring.append("?devid="+devId);
-
-		
-		String queryurl = VERSION + paramstring.toString();
-		String signature = crypto.hmacSha1(queryurl, null);
-		String ret = BASEURL + queryurl + "&signature=" + signature;
-		return ret;
-	}
-	
 	
 	private String getQueryURL(String apicall, List<KeyVal> paramsURL, List<KeyVal> paramsParameters) {
 		StringBuffer paramstring = new StringBuffer();
@@ -122,17 +82,20 @@ public class PTVAPI {
 				KeyVal keyval = iterator.next();
 				paramstring.append(keyval.key);
 				paramstring.append("/");
-				String val;
-				try {
-					val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					val = keyval.value;
+				
+				if(keyval.value != null) {
+					String val;
+					try {
+						val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
+					} catch (UnsupportedEncodingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						val = keyval.value;
+					}
+					paramstring.append(val);
+					if(iterator.hasNext())
+						paramstring.append("/");
 				}
-				paramstring.append(val);
-				if(iterator.hasNext())
-					paramstring.append("/");
 			}
 		} 
 		if(apicall != null){
@@ -166,7 +129,7 @@ public class PTVAPI {
 		return ret;
 	}
 	
-	private static String getQueryResult(String queryurl) {
+	private static String executeQueryForJsonResult(String queryurl) {
 		String ret = null;
 		System.out.println(queryurl);
 		try {
@@ -192,15 +155,70 @@ public class PTVAPI {
 		return ret;
 	}
 
+
+	/* ***************************************
+	 * 
+	 * 
+	 * 
+	 * 	API Implementation starts here
+	 * 
+	 * 
+	 * 
+	 *************************************** */
+	
+
 	public String getStatus() {
 		String ret = null;
 		List<KeyVal> params = new ArrayList<>();
 		params.add(new KeyVal("timestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime())));
-		ret = getQueryResult(getQueryURLParams(API_HEALTHCHECK, params));
+		ret = executeQueryForJsonResult(getQueryURL(API_HEALTHCHECK, null, params));
 
 		return ret;
 	}
+	
+	
+	public List<Result> getStopsNearby(Double latitude, Double longitude) {
+		List<Result> resultlist = new ArrayList<Result>();
 
+		String ret = null;
+		List<KeyVal> params = new ArrayList<>();
+		
+		params.add(new KeyVal("nearme", null));
+		params.add(new KeyVal("latitude", latitude.toString()));
+		params.add(new KeyVal("longitude", longitude.toString()));
+		
+		String queryurl = getQueryURL(null, params, null);
+		ret = executeQueryForJsonResult(queryurl);
+
+		JsonElement resultvalue = null;
+		JsonStreamParser parser = new JsonStreamParser(ret);
+		while(parser.hasNext()) {
+			JsonElement next = parser.next();
+			if(next.isJsonObject()) {
+				System.err.println("result is no object: "+next.toString());
+			}
+			if(next.isJsonArray()) {
+				JsonArray array = next.getAsJsonArray();
+				for(JsonElement elem : array){
+					
+					JsonObject resultentry = elem.getAsJsonObject();
+					resultvalue = resultentry.get("result");
+					String type = resultentry.get("type").getAsString();
+					if(type.equals("stop")){
+						Stop stop = gson.fromJson(resultvalue, Stop.class);
+						resultlist.add(stop);
+					}
+
+					if(type.equals("line")){
+						Line line = gson.fromJson(resultvalue, Line.class);
+						resultlist.add(line);
+					}
+				}
+			}
+		}
+		
+		return resultlist;
+	}
 	
 	public List<Result> getStationInfo(String name) {
 		List<Result> resultlist = new ArrayList<Result>();
@@ -208,7 +226,7 @@ public class PTVAPI {
 		String ret = null;
 		List<KeyVal> params = new ArrayList<>();
 		params.add(new KeyVal("search", name));
-		ret = getQueryResult(getQueryURL(null, params, null));
+		ret = executeQueryForJsonResult(getQueryURL(null, params, null));
 		
 		JsonElement resultvalue = null;
 		
@@ -246,11 +264,11 @@ public class PTVAPI {
 		
 		List<KeyVal> params = new ArrayList<>();
 		
-		params.add(new KeyVal("mode", Mode.getMode(line.getTransport_type()).toString()));
+		params.add(new KeyVal("mode", Helper.convertTransportTypeToModeId(line.getTransport_type()).toString()));
 		params.add(new KeyVal("line", line.getLine_id().toString()));
 		
 		String queryURLREST = getQueryURL("stops-for-line", params, null);
-		String queryresult = getQueryResult(queryURLREST);
+		String queryresult = executeQueryForJsonResult(queryURLREST);
 		JsonStreamParser parser = new JsonStreamParser(queryresult);
 		while(parser.hasNext()) {
 			JsonElement next = parser.next();
@@ -276,11 +294,11 @@ public class PTVAPI {
 	}
 
 
-	private StoppingPattern getStoppingPattern(String transport_type, Integer runId, Integer stopId,
+	public StoppingPattern getStoppingPattern(String transport_type, Integer runId, Integer stopId,
 			String currentTimeAsUTC) {
 
 		List<KeyVal> params = new ArrayList<>();
-		params.add(new KeyVal("mode", Mode.getMode(transport_type).toString()));
+		params.add(new KeyVal("mode", Helper.convertTransportTypeToModeId(transport_type).toString()));
 		params.add(new KeyVal("run", runId.toString()));
 		params.add(new KeyVal("stop", stopId.toString()));
 
@@ -289,8 +307,83 @@ public class PTVAPI {
 
 		
 		String queryURLREST = getQueryURL("stopping-pattern", params, params2);
-		String queryresult = getQueryResult(queryURLREST);
+		String queryresult = executeQueryForJsonResult(queryURLREST);
 		JsonStreamParser parser = new JsonStreamParser(queryresult);
 		return null;
+	}
+	
+	
+	public List<Departure> getBroadNextDepartures(Stop stop, Integer maxResults) {
+		
+		
+		List<KeyVal> params = new ArrayList<>();
+		params.add(new KeyVal("mode", Helper.convertTransportTypeToModeId(stop.getTransport_type()).toString()));
+		params.add(new KeyVal("stop", stop.getStop_id().toString()));
+		params.add(new KeyVal("departures", "by-destination"));
+		params.add(new KeyVal("limit", maxResults.toString()));
+		
+		String queryURLREST = getQueryURL(null, params, null);
+		String queryresult = executeQueryForJsonResult(queryURLREST);
+		JsonStreamParser parser = new JsonStreamParser(queryresult);
+		
+		while(parser.hasNext()) {
+			JsonElement values = parser.next();
+			
+			return getDepartures(values);
+			
+		}
+		
+		
+		return null;
+	}
+
+	public List<Departure> getSpecificNextDepartures(Departure departure, Integer maxResults, Date time) {
+		return getSpecificNextDepartures(departure, maxResults, Helper.getCurrentTimeAsUTC(time));
+	}
+
+
+	public List<Departure> getSpecificNextDepartures(Departure departure, Integer maxResults, String currentTimeAsUTC) {
+		
+		
+		List<KeyVal> params = new ArrayList<>();
+		params.add(new KeyVal("mode", Helper.convertTransportTypeToModeId(departure.getPlatform().getStop().getTransport_type()).toString()));
+		params.add(new KeyVal("line", departure.getPlatform().getDirection().getLine().getLine_id().toString()));
+		params.add(new KeyVal("stop", departure.getPlatform().getStop().getStop_id().toString()));
+		params.add(new KeyVal("directionid", departure.getPlatform().getDirection().getDirection_id().toString()));
+		params.add(new KeyVal("departures", "all"));
+		params.add(new KeyVal("limit", maxResults.toString()));
+
+		List<KeyVal> params2 = new ArrayList<>();
+		params2.add(new KeyVal("for_utc", currentTimeAsUTC));
+
+		
+		String queryURLREST = getQueryURL(null, params, null);
+		String queryresult = executeQueryForJsonResult(queryURLREST);
+		JsonStreamParser parser = new JsonStreamParser(queryresult);
+		
+		while(parser.hasNext()) {
+			JsonElement values = parser.next();
+			
+			return getDepartures(values);
+			
+		}
+		
+		
+		return null;
+	}
+
+	
+	
+	List<Departure> getDepartures(JsonElement values) {
+		List<Departure> listDepartures = new ArrayList<Departure>();
+		JsonArray asJsonArray = values.getAsJsonObject().get("values").getAsJsonArray();
+		
+		for(JsonElement curVal : asJsonArray){
+			
+			Departure departure = gson.fromJson(curVal, Departure.class);
+			
+			listDepartures.add(departure);
+		}
+		return listDepartures;
 	}
 }
