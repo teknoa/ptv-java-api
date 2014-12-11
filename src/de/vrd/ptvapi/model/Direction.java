@@ -32,5 +32,12 @@ public class Direction {
 		this.line = line;
 	}
 	
+	public String toString() {
+		return "Direction id["+direction_id+ "] Name:"+direction_name+ " linedirectionId: "+linedir_id;
+	}
 	
+	public String toStringRecursive() {
+		return toString()
+				+"\n\tLine Details:\n" + line.toStringRecursive();
+	}
 }

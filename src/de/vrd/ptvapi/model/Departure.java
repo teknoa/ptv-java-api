@@ -40,5 +40,11 @@ public class Departure {
 		this.flags = flags;
 	}
 	
+	public String toString() {
+		return "Departure at "+time_table_utc + " flags [" + flags + "]";
+	}
 	
+	public String toStringRecursive() {
+		return "-----\n" + toString() + "\n" + platform.toStringRecursive() + "\n" + run.toString();
+	}
 }

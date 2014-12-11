@@ -8,9 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -33,7 +31,6 @@ import de.vrd.ptvapi.model.Line;
 import de.vrd.ptvapi.model.Platform;
 import de.vrd.ptvapi.model.Result;
 import de.vrd.ptvapi.model.Stop;
-import de.vrd.ptvapi.model.StoppingPattern;
 
 public class PTVAPI {
 
@@ -74,86 +71,6 @@ public class PTVAPI {
 	}
 
 	
-	private String getQueryURL(String apicall, List<KeyVal> paramsURL, List<KeyVal> paramsParameters) {
-		StringBuffer paramstring = new StringBuffer();
-		if(paramsURL != null) {
-			Iterator<KeyVal> iterator = paramsURL.iterator();
-			while(iterator.hasNext()){
-				KeyVal keyval = iterator.next();
-				paramstring.append(keyval.key);
-				paramstring.append("/");
-				
-				if(keyval.value != null) {
-					String val;
-					try {
-						val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
-					} catch (UnsupportedEncodingException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-						val = keyval.value;
-					}
-					paramstring.append(val);
-					if(iterator.hasNext())
-						paramstring.append("/");
-				}
-			}
-		} 
-		if(apicall != null){
-			if(paramsURL != null)
-				paramstring.append("/");
-			paramstring.append(apicall);
-		}
-		
-		paramstring.append("?devid="+devId);
-		
-		if(paramsParameters != null)
-			for(KeyVal keyval: paramsParameters){
-				paramstring.append("&");
-				paramstring.append(keyval.key);
-				paramstring.append("=");
-				String val;
-				try {
-					val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					val = keyval.value;
-				}
-				paramstring.append(val);
-			}
-		
-
-		String queryurl = VERSION + paramstring.toString();
-		String signature = crypto.hmacSha1(queryurl, null);
-		String ret = BASEURL + queryurl + "&signature=" + signature;
-		return ret;
-	}
-	
-	private static String executeQueryForJsonResult(String queryurl) {
-		String ret = null;
-		System.out.println(queryurl);
-		try {
-			URL url = new URL(queryurl);
-			URLConnection openConnection = url.openConnection();
-			InputStream inputStream = openConnection.getInputStream();
-
-			StringBuffer strbuf = new StringBuffer();
-
-			BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-			String line = null;
-			while((line = reader.readLine()) != null) {
-				strbuf.append(line);
-			}
-			ret = strbuf.toString();
-		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return ret;
-	}
 
 
 	/* ***************************************
@@ -170,7 +87,7 @@ public class PTVAPI {
 	public String getStatus() {
 		String ret = null;
 		List<KeyVal> params = new ArrayList<>();
-		params.add(new KeyVal("timestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime())));
+		params.add(new KeyVal("timestamp", Helper.getCurrentTimeAsUTC(null)));
 		ret = executeQueryForJsonResult(getQueryURL(API_HEALTHCHECK, null, params));
 
 		return ret;
@@ -274,7 +191,6 @@ public class PTVAPI {
 			JsonElement next = parser.next();
 			if(next.isJsonArray()){
 				for(JsonElement curelement : next.getAsJsonArray()) {
-					JsonObject curObj = (JsonObject)curelement.getAsJsonObject();
 					Stop stop = gson.fromJson(curelement, Stop.class);
 					stops.add(stop);
 				}
@@ -289,18 +205,17 @@ public class PTVAPI {
 		
 	}
 	
-	public StoppingPattern getStoppingPattern(String transport_type, Integer runId, Integer stopId, Date time) {
-		return getStoppingPattern(transport_type, runId, stopId, Helper.getCurrentTimeAsUTC(time));
+	public List<Departure> getStoppingPattern(Departure departure, Date time) {
+		return getStoppingPattern(departure, Helper.getCurrentTimeAsUTC(time));
 	}
 
 
-	public StoppingPattern getStoppingPattern(String transport_type, Integer runId, Integer stopId,
-			String currentTimeAsUTC) {
+	public List<Departure> getStoppingPattern(Departure departure, String currentTimeAsUTC) {
 
 		List<KeyVal> params = new ArrayList<>();
-		params.add(new KeyVal("mode", Helper.convertTransportTypeToModeId(transport_type).toString()));
-		params.add(new KeyVal("run", runId.toString()));
-		params.add(new KeyVal("stop", stopId.toString()));
+		params.add(new KeyVal("mode", Helper.convertTransportTypeToModeId(departure.getRun().getTransport_type()).toString()));
+		params.add(new KeyVal("run", departure.getRun().getRun_id().toString()));
+		params.add(new KeyVal("stop", departure.getPlatform().getStop().getStop_id().toString()));
 
 		List<KeyVal> params2 = new ArrayList<>();
 		params2.add(new KeyVal("for_utc", currentTimeAsUTC));
@@ -309,6 +224,14 @@ public class PTVAPI {
 		String queryURLREST = getQueryURL("stopping-pattern", params, params2);
 		String queryresult = executeQueryForJsonResult(queryURLREST);
 		JsonStreamParser parser = new JsonStreamParser(queryresult);
+		
+		while(parser.hasNext()) {
+			JsonElement values = parser.next();
+			
+			return getDepartures(values);
+			
+		}
+		
 		return null;
 	}
 	
@@ -357,7 +280,7 @@ public class PTVAPI {
 		params2.add(new KeyVal("for_utc", currentTimeAsUTC));
 
 		
-		String queryURLREST = getQueryURL(null, params, null);
+		String queryURLREST = getQueryURL(null, params, params2);
 		String queryresult = executeQueryForJsonResult(queryURLREST);
 		JsonStreamParser parser = new JsonStreamParser(queryresult);
 		
@@ -373,8 +296,86 @@ public class PTVAPI {
 	}
 
 	
+	private String getQueryURL(String apicall, List<KeyVal> paramsURL, List<KeyVal> paramsParameters) {
+		StringBuffer paramstring = new StringBuffer();
+		if(paramsURL != null) {
+			Iterator<KeyVal> iterator = paramsURL.iterator();
+			while(iterator.hasNext()){
+				KeyVal keyval = iterator.next();
+				paramstring.append(keyval.key);
+				paramstring.append("/");
+				
+				if(keyval.value != null) {
+					String val;
+					try {
+						val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
+					} catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+						val = keyval.value;
+					}
+					paramstring.append(val);
+					if(iterator.hasNext())
+						paramstring.append("/");
+				}
+			}
+		} 
+		if(apicall != null){
+			if(paramsURL != null)
+				paramstring.append("/");
+			paramstring.append(apicall);
+		}
+		
+		paramstring.append("?devid="+devId);
+		
+		if(paramsParameters != null)
+			for(KeyVal keyval: paramsParameters){
+				paramstring.append("&");
+				paramstring.append(keyval.key);
+				paramstring.append("=");
+				String val = keyval.value;
+				/*
+				try {
+					val = codec.encode(keyval.value, "UTF-8").replace("+","%20");
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+					val = keyval.value;
+				}
+				*/
+				paramstring.append(val);
+			}
+		
+
+		String queryurl = VERSION + paramstring.toString();
+		String signature = crypto.hmacSha1(queryurl, null);
+		String ret = BASEURL + queryurl + "&signature=" + signature;
+		return ret;
+	}
 	
-	List<Departure> getDepartures(JsonElement values) {
+	private static String executeQueryForJsonResult(String queryurl) {
+		String ret = null;
+		System.out.println(queryurl);
+		try {
+			URL url = new URL(queryurl);
+			URLConnection openConnection = url.openConnection();
+			InputStream inputStream = openConnection.getInputStream();
+
+			StringBuffer strbuf = new StringBuffer();
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+			String line = null;
+			while((line = reader.readLine()) != null) {
+				strbuf.append(line);
+			}
+			ret = strbuf.toString();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+	
+	private List<Departure> getDepartures(JsonElement values) {
 		List<Departure> listDepartures = new ArrayList<Departure>();
 		JsonArray asJsonArray = values.getAsJsonObject().get("values").getAsJsonArray();
 		

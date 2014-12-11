@@ -46,5 +46,15 @@ public class Line implements Result{
 		this.stops = stops;
 	}
 	
-	
+	public String toString() {
+		return "Line ["+line_id + "], Name:'"+line_name+ "', Number:"+line_number+ ", transporttype:"+transport_type;
+	}
+	public String toStringRecursive() {
+		StringBuffer buf = new StringBuffer();
+		buf.append(toString()+"\n\t=====Stops=====");
+		if(stops != null)
+			for(Stop stop : stops)
+				buf.append("\t->" + stop.toString() +"\n");
+		return buf.toString();
+	}
 }

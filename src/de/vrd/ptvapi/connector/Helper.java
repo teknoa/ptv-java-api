@@ -2,17 +2,18 @@ package de.vrd.ptvapi.connector;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 public class Helper {
 
-	private static final String PATTERN = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+	private static final String PATTERN = "yyyy-MM-dd'T'hh:mm:ss'Z'";
 
 	public static String getCurrentTimeAsUTC(Date date) {
 		if(date == null)
 			date = new Date();
 		
 		SimpleDateFormat formatter = new SimpleDateFormat(PATTERN);
-		
+		formatter.setTimeZone(TimeZone.getTimeZone("EDT"));
 		return formatter.format(date);
 		
 	}

@@ -9,18 +9,19 @@ import de.vrd.ptvapi.model.Line;
 import de.vrd.ptvapi.model.Result;
 import de.vrd.ptvapi.model.Stop;
 
-public class TestSearch {
+public class TestPTVAPI {
 	PTVAPI api;
-	public TestSearch(PTVAPI api) {
+	public TestPTVAPI(PTVAPI api) {
 		this.api = api;
 	}
 	
 	public void performTests() {
 		testStatus();
-		testStopsNearby();
+//		testStopsNearby();
 //		testStation();
 //		testBroadNextDepartures();
 //		testSpecificNextDepartures();
+		testStoppingPatternForDeparture();
 	}
 	
 	public void testStatus() {
@@ -61,10 +62,14 @@ public class TestSearch {
 		if(stop != null)
 			listDepartures = api.getBroadNextDepartures(stop, 10);
 		System.out.println(listDepartures.size());
+		System.out.println("printing out broad departures for query 'Pakenham'");
+		for(Departure dep : listDepartures)
+			System.out.println(dep.toStringRecursive());
 	}
 	
 	public void testSpecificNextDepartures() {
-		List<Result> stationInfo = api.getStationInfo("Pakenham");
+		String search = "Clayton Station";
+		List<Result> stationInfo = api.getStationInfo(search);
 		Stop stop = null;
 		for(Result curres : stationInfo) {
 			if(curres instanceof Stop) {
@@ -79,6 +84,47 @@ public class TestSearch {
 		if( ! listDepartures.isEmpty()) {
 			List<Departure> specificNextDepartures = api.getSpecificNextDepartures(listDepartures.get(0), 10, (Date)null);
 			System.out.println(specificNextDepartures.size());
+			
+			System.out.println("printing out specific departures for query '"+search+"'");
+			
+			for(Departure dep : specificNextDepartures)
+				System.out.println(dep.toStringRecursive());
+			
+			
 		}
 	}
+
+	public void testStoppingPatternForDeparture() {
+		String search = "Clayton Station";
+		List<Result> stationInfo = api.getStationInfo(search);
+		Stop stop = null;
+		for(Result curres : stationInfo) {
+			if(curres instanceof Stop) {
+				stop = (Stop) curres;
+				break;
+			}
+		}
+		List<Departure> listDepartures = null;
+		if(stop != null)
+			listDepartures = api.getBroadNextDepartures(stop, 10);
+		
+		if( ! listDepartures.isEmpty()) {
+			List<Departure> specificNextDepartures = api.getSpecificNextDepartures(listDepartures.get(0), 10, (Date)null);
+			System.out.println(specificNextDepartures.size());
+			
+			System.out.println("printing out specific departure (listindex 0) for query '"+search+"'");
+			System.out.println(listDepartures.get(0).toStringRecursive());
+			
+			List<Departure> stoppingPattern = api.getStoppingPattern(listDepartures.get(0), (Date)null);
+			
+			System.out.println("\n\n\n================================\n\n\n");
+			System.out.println("printing out stopping pattern for (listindex 0) for query '"+search+"'");
+			for(Departure dep : stoppingPattern)
+				System.out.println(dep.toStringRecursive());
+			
+			
+		}
+	}
+
+
 }

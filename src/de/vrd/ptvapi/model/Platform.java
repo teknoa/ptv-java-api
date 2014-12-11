@@ -31,6 +31,13 @@ public class Platform {
 		this.direction = direction;
 	}
 	
+	public String toString() {
+		return "Platform realtimeid:"+realtime_id;
+	}
 	
+	public String toStringRecursive() {
+		return toString() + "\n\t(H) " + stop.toString() + "\n to -> " + direction.toStringRecursive();
+	}
+
 	
 }

@@ -38,5 +38,7 @@ public class Run {
 		this.destination_name = destination_name;
 	}
 	
-	
+	public String toString() {
+		return "Run id:"+run_id + ", transportType:"+transport_type + ", destination: '"+destination_name+ "', id["+destination_id + "], skipping "+num_skipped + " stops.";
+	}
 }
