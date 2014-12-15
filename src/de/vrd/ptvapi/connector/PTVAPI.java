@@ -8,10 +8,13 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import org.apache.commons.codec.net.URLCodec;
 
@@ -295,7 +298,64 @@ public class PTVAPI {
 		return null;
 	}
 
+	public void getJourneys(String origin, String destination) {
+		Locale localLocale = Locale.US;
+		Object[] arrayOfObject = new Object[4];
+	    arrayOfObject[0] = origin;
+	    arrayOfObject[1] = destination;
+//	    arrayOfObject[2] = getJourneyPrefsAPIString();
+	    arrayOfObject[2] = getMetlinkAPIToken();
+	    String url = String.format(localLocale, "http://api.ptv.vic.gov.au/v2/journey-planner/o/%s/d/%s?token=%s", arrayOfObject);
+	    
+	    String executeQueryForJsonResult = executeQueryForJsonResult(url);
+	    System.out.println();
+	}
 	
+/*	  
+	public  String getJourneyPrefsAPIString()
+	{
+		Object[] arrayOfObject = new Object[14];
+		arrayOfObject[0] = Boolean.valueOf(true);
+		arrayOfObject[1] = MyDateTime.getAPIDateTime(paramJourneyPreference.getDepartOrArrivalTime());
+		arrayOfObject[2] = paramJourneyPreference.walkingSpeed;
+		arrayOfObject[3] = paramJourneyPreference.transferMethod;
+		arrayOfObject[4] = paramJourneyPreference.maxTransferTime;
+		arrayOfObject[5] = paramJourneyPreference.tripPreference;
+		arrayOfObject[6] = Boolean.valueOf(paramJourneyPreference.showAccessibleServices);
+		arrayOfObject[7] = Boolean.valueOf(paramJourneyPreference.showAccessibleStops);
+		arrayOfObject[8] = Boolean.valueOf(paramJourneyPreference.preferredTransport.contains(PreferredTransport.Trains));
+		arrayOfObject[9] = Boolean.valueOf(paramJourneyPreference.preferredTransport.contains(PreferredTransport.Trams));
+		arrayOfObject[10] = Boolean.valueOf(paramJourneyPreference.preferredTransport.contains(PreferredTransport.Buses));
+		arrayOfObject[11] = Boolean.valueOf(paramJourneyPreference.preferredTransport.contains(PreferredTransport.RegionalTrains));
+		arrayOfObject[12] = Boolean.valueOf(paramJourneyPreference.preferredTransport.contains(PreferredTransport.RegionalCoaches));
+		arrayOfObject[13] = Boolean.valueOf(paramJourneyPreference.preferredTransport.contains(PreferredTransport.Skybus));
+		return String.format("departFrom=%b&time_utc=%s&transferSpeed=%s&transferMethod=%s&transferMaxTime=%s&routeType=%s&wheelchair=%b&noSolidStairs=%b&inclTrain=%s&inclTram=%s&inclBus=%s&inclVline=%s&inclRegCoach=%s&inclSkybus=%s", arrayOfObject);
+	}	
+*/	
+	  public  String getAPITokenTimeMessage()
+	  {
+	    return formatTimeUTC("yyyyMMddHH", System.currentTimeMillis());
+	  }
+	  public  String getMetlinkAPIToken()
+	  {
+	    return crypto.hmacSha1(getAPITokenTimeMessage(), "931df831-d4ee-11e3-89f1-00fffdfe3ac2");
+	  }
+	
+	  private  String formatTimeUTC(String paramString, long paramLong)
+	  {
+	    SimpleDateFormat localSimpleDateFormat = new SimpleDateFormat(paramString, Locale.ENGLISH);
+	    TimeZone localTimeZone = TimeZone.getTimeZone("UTC");
+	    Date localDate = new Date(paramLong);
+	    localSimpleDateFormat.setTimeZone(localTimeZone);
+	    return localSimpleDateFormat.format(localDate);
+	  }
+	
+	/*
+	 * 
+	 * 	Private helper methods
+	 * 
+	 * 
+	 */
 	private String getQueryURL(String apicall, List<KeyVal> paramsURL, List<KeyVal> paramsParameters) {
 		StringBuffer paramstring = new StringBuffer();
 		if(paramsURL != null) {
@@ -387,4 +447,5 @@ public class PTVAPI {
 		}
 		return listDepartures;
 	}
+	
 }

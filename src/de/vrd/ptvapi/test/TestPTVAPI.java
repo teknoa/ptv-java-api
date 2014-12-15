@@ -21,7 +21,8 @@ public class TestPTVAPI {
 //		testStation();
 //		testBroadNextDepartures();
 //		testSpecificNextDepartures();
-		testStoppingPatternForDeparture();
+		testJourney();
+//		testStoppingPatternForDeparture();
 	}
 	
 	public void testStatus() {
@@ -126,5 +127,7 @@ public class TestPTVAPI {
 		}
 	}
 
-
+	public void testJourney() {
+		api.getJourneys("Clayton", "Flindern");
+	}
 }
