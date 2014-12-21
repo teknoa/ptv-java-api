@@ -1,2 +1,3 @@
 bin
 src/de/vrd/ptvapi/test/TestMaster.java
+/target/
