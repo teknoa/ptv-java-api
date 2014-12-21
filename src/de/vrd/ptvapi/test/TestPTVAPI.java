@@ -18,10 +18,10 @@ public class TestPTVAPI {
 	public void performTests() {
 		testStatus();
 //		testStopsNearby();
-//		testStation();
+		testStation();
 //		testBroadNextDepartures();
 //		testSpecificNextDepartures();
-		testJourney();
+//		testJourney();
 //		testStoppingPatternForDeparture();
 	}
 	
@@ -41,11 +41,18 @@ public class TestPTVAPI {
 	
 	
 	public void testStation() {
-		List<Result> stationInfo = api.getStationInfo("Pakenham");
+		List<Result> stationInfo = api.getStationInfo("Clayton rail");
 		for(Result curres : stationInfo) {
+			System.out.println(" \n#################################################\n");
 			if(curres instanceof Line){
 				List<Stop> stops = api.getStopsOnLine((Line)curres);
-				System.out.println(((Line) curres).getTransport_type() + " with " +stops.size() + " stops on line " + ((Line)curres).getLine_name());
+//				System.out.println(((Line)curres).toStringRecursive());
+			}
+			if(curres instanceof Stop) {
+				List<Departure> broadNextDepartures = api.getBroadNextDepartures((Stop)curres, 1);
+				for(Departure dep : broadNextDepartures)
+					System.out.println(dep.toStringRecursive() + " \n==============================\n");
+				
 			}
 		}
 	}

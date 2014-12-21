@@ -41,7 +41,7 @@ public class Departure {
 	}
 	
 	public String toString() {
-		return "Departure at "+time_table_utc + " flags [" + flags + "]";
+		return "Departure from '" + platform.stop.getLocation_name() + "' at "+time_table_utc + " flags [" + flags + "]";
 	}
 	
 	public String toStringRecursive() {

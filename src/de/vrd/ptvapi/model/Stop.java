@@ -29,6 +29,6 @@ public class Stop extends Location implements Result{
 	}
 
 	public String toString() {
-		return "Stop id:"+ stop_id + ", transportType:"+transport_type + ", departure:"+departureTime+", suburb:'"+suburb+ "', locationname: '"+location_name + "', coord[lat("+lat+ ") lon(" +lon+ ")]";
+		return "Stop["+ stop_id + "], "+location_name+"{"+transport_type + "}, departure:"+departureTime+", suburb:'"+suburb+ "', coord[lat("+lat+ ") lon(" +lon+ ")]";
 	}
 }
